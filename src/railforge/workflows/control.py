@@ -80,7 +80,19 @@ class RailForgeWorkflowControl:
             if previous.topic != topic or previous.subject != subject:
                 raise ValueError("operation id reused for a different workflow")
             return previous
-        result = action()
+        try:
+            result = action()
+        except Exception as exc:
+            payload = {
+                "operation_id": operation_id,
+                "status": "rejected",
+                "control_path": "legacy" if topic in BROKEN_CONTROL_TOPICS else "atomic",
+                "reason": str(exc),
+                **dict(evidence or {}),
+            }
+            self.stream.publish(operation_id + ":rejected", at, topic, subject, payload)
+            self.trail.append("railforge-control", topic, subject, at)
+            raise
         version = self.store.write(subject, _safe(result))
         payload = {
             "operation_id": operation_id,
@@ -187,6 +199,3 @@ class RailForgeWorkflowControl:
     def fuse_eta(self, operation_id, rows, max_lateness, subject, at):
         return self._commit(operation_id, "eta.fused", subject, at,
                             lambda: fused_delay(rows, max_lateness))
-
-
-BROKEN_CONTROL_TOPICS.add('possession.protected')
