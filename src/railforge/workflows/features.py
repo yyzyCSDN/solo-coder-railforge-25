@@ -75,11 +75,20 @@ class RailForgeFeatureService:
 
     def approve_possession(self, operation_id, candidate, rows, occupancies, occupancy, clearance, at):
         def action():
-            if possession_conflicts(candidate, rows):
-                raise ValueError("possession conflict")
-            if block_conflicts(occupancy, occupancies, clearance):
-                raise ValueError("block conflict")
-            return {"approved": True}
+            possession_hits = possession_conflicts(candidate, rows)
+            block_hits = block_conflicts(occupancy, occupancies, clearance)
+            reasons = []
+            if possession_hits:
+                reasons.append("possession_conflict")
+            if block_hits:
+                reasons.append("block_conflict")
+            return {
+                "approved": not reasons,
+                "occupancy": occupancy,
+                "possession_conflicts": possession_hits,
+                "block_conflicts": block_hits,
+                "reasons": reasons,
+            }
         return self.control.run(operation_id, "feature.possession.approved", operation_id, at, action)
 
     def release_vehicle(self, operation_id, evidence, policy, check_at, brake_rows, gradient, at):

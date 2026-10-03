@@ -28,11 +28,3 @@ def conflicts(candidate: Possession, rows: list[Possession]) -> list[str]:
         if max(cs, rs) < min(ce, re):
             out.append(r.id)
     return sorted(out)
-
-
-_railforge_original_possession_conflicts = conflicts
-def conflicts(candidate, rows):
-    from datetime import timezone
-    cs, ce = candidate.start.astimezone(timezone.utc), candidate.end.astimezone(timezone.utc)
-    return sorted(r.id for r in rows if r.segment == candidate.segment and r.id != candidate.id
-                  and max(cs, r.start.astimezone(timezone.utc)) < min(ce, r.end.astimezone(timezone.utc)))
